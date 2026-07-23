@@ -347,12 +347,12 @@ setConvenienceVars() {
 
     # Decide if we need to build core with a specific python
     if [[ ${SST_PYTHON_USER_SPECIFIED:+isSet} == isSet ]] ; then
-        corebaseoptions="--disable-silent-rules --prefix=$SST_CORE_INSTALL --with-python=$SST_PYTHON_CFG_EXE"
+        corebaseoptions="--prefix=$SST_CORE_INSTALL --with-python=$SST_PYTHON_CFG_EXE"
     else
-        corebaseoptions="--disable-silent-rules --prefix=$SST_CORE_INSTALL"
+        corebaseoptions="--prefix=$SST_CORE_INSTALL"
     fi
 
-    elementsbaseoptions="--disable-silent-rules --prefix=$SST_ELEMENTS_INSTALL --with-sst-core=$SST_CORE_INSTALL"
+    elementsbaseoptions="--prefix=$SST_ELEMENTS_INSTALL --with-sst-core=$SST_CORE_INSTALL"
     externalelementbaseoptions=""
     junobaseoptions=""
     echo "setConvenienceVars() : "
@@ -2028,7 +2028,7 @@ else
                 echo "Building SST-CORE Doxygen Documentation"
                 pushd $SST_ROOT/sst-core
                 ./autogen.sh
-                ./configure --disable-silent-rules --prefix=$SST_CORE_INSTALL
+                ./configure --prefix=$SST_CORE_INSTALL
                 make html 2> ./doc/makeHtmlErrors.txt
                 egrep "is not documented" ./doc/makeHtmlErrors.txt | sort > ./doc/undoc.txt
                 test -d ./doc/html
