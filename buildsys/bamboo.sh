@@ -50,13 +50,14 @@ cloneRepo() {
     local commit_hash
     commit_hash="${!commit_hash_varname}"
 
+    # Filter out blobs.  Required blobs will be pulled as needed.
     echo " "
-    echo "     TimeoutEx -t ${timeout} git clone ${repo} ${clone_loc}"
+    echo "     TimeoutEx -t ${timeout} git clone --quiet --filter=blob:none ${repo} ${clone_loc}"
     date
-    TimeoutEx -t "${timeout}" git clone "${repo}" "${clone_loc}"
+    TimeoutEx -t "${timeout}" git clone --quiet --filter=blob:none "${repo}" "${clone_loc}"
     retVal=$?
     if [ $retVal -ne 0 ]; then
-        echo "\"git clone ${repo} ${clone_loc}\" FAILED."
+        echo "\"git clone --quiet --filter=blob:none ${repo} ${clone_loc}\" FAILED."
         exit 1
     fi
     date
@@ -361,13 +362,14 @@ setConvenienceVars() {
 
     # Decide if we need to build core with a specific python
     if [[ ${SST_PYTHON_USER_SPECIFIED:+isSet} == isSet ]] ; then
-        corebaseoptions="--disable-silent-rules --prefix=$SST_CORE_INSTALL --with-python=$SST_PYTHON_CFG_EXE"
+        corebaseoptions="--prefix=$SST_CORE_INSTALL --with-python=$SST_PYTHON_CFG_EXE"
     else
-        corebaseoptions="--disable-silent-rules --prefix=$SST_CORE_INSTALL"
+        corebaseoptions="--prefix=$SST_CORE_INSTALL"
     fi
 
-    elementsbaseoptions="--disable-silent-rules --prefix=$SST_ELEMENTS_INSTALL --with-sst-core=$SST_CORE_INSTALL"
-    hgccbaseoptions="--disable-silent-rules --prefix=$SST_HGCC_INSTALL --with-sst-core=$SST_CORE_INSTALL --with-sst-elements=$SST_ELEMENTS_INSTALL --with-std=17 --enable-strict-tests"
+    elementsbaseoptions="--prefix=$SST_ELEMENTS_INSTALL --with-sst-core=$SST_CORE_INSTALL"
+    hgccbaseoptions="--prefix=$SST_HGCC_INSTALL --with-sst-core=$SST_CORE_INSTALL --with-sst-elements=$SST_ELEMENTS_INSTALL --with-std=17 --enable-strict-tests"
+    elementsbaseoptions="--prefix=$SST_ELEMENTS_INSTALL --with-sst-core=$SST_CORE_INSTALL"
     externalelementbaseoptions=""
     junobaseoptions=""
     echo "setConvenienceVars() : "
@@ -824,9 +826,9 @@ set_up_environment_modules() {
 
     echo "Testing modules utility via ModuleEx..."
     echo "ModuleEx avail"
-    ModuleEx avail
+    ModuleEx avail >& /dev/null
     if [ $? -ne 0 ] ; then
-        echo " ModuleEx Failed"
+        echo " ModuleEx avail Failed"
         exit 1
     fi
 }
@@ -920,7 +922,7 @@ linuxSetMPI() {
 
 ldModules_MacOS_Clang() {
     local ClangVersion=$1            #   example "clang-700.0.72" $2
-    ModuleEx avail
+
     # Use MPI built with CLANG from Xcode
     ModuleEx unload mpi
 
@@ -1252,10 +1254,8 @@ config_and_build() {
         echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 
         echo "NOTE: ${conf_script_name} Must be run in ${repo_name} Source Dir to create configuration file"
-        echo "Current Working Dir = $(pwd)"
         echo "pushd ${source_dir}"
         pushd "${source_dir}"
-        echo "${conf_script_name} Working Dir = $(pwd)"
         ls -l
         echo "=== Running ${conf_script_name}.sh ==="
 
@@ -1271,7 +1271,6 @@ config_and_build() {
         ls -ltrd * | tail -20
         echo "popd"
         popd
-        echo "Current Working Dir = $(pwd)"
         ls -l
 
         echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -1289,7 +1288,6 @@ config_and_build() {
             mkdir ./${repo_name}-builddir
             echo "pushd ${repo_name}-builddir"
             pushd "${repo_name}-builddir"
-            echo "Current Working Dir = $(pwd)"
             ls -l
             sourcedir="../${repo_name}"
         else
@@ -1297,7 +1295,6 @@ config_and_build() {
             echo "Starting Dir = $(pwd)"
             echo "pushd ${source_dir}"
             pushd "${source_dir}"
-            echo "Current Working Dir = $(pwd)"
             ls -l
             sourcedir="."
         fi
@@ -1322,18 +1319,12 @@ config_and_build() {
             echo "--------------------dump of config.log--------------------"
             return $retval
         fi
-        echo "     ------------   After configure files at sourcedir are:"
-        ls -ltrd "${sourcedir}"/* | tail -14
-        echo " Local files are ------------"
-        ls -ltrd *
-        echo  " ---------"
         echo ' '
         echo "bamboo.sh: configure on ${repo_name} complete without error"
         echo ' '
         echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
         echo " "
         pwd
-        ls -ltrd * | tail -20
 
         echo "at this time \$buildtype is $buildtype"
         if [[ $buildtype == *make_dist* ]] ; then
@@ -1354,9 +1345,6 @@ config_and_build() {
             pwd
             ls | grep tar
             echo ' '
-            echo "+++++++++++++++++++++++++++++++++++++++++++++++++++ makeDist"
-            echo " "
-            ls -ltr | tail -5
             echo "+++++++++++++++++++++++++++++++++++++++++++++++++++ makeDist"
             echo ' '
             echo "bamboo.sh: After make dist on ${repo_name} do the make install "
@@ -1460,7 +1448,6 @@ config_and_build() {
         # Go back to devel/trunk
         echo "popd"
         popd
-        echo "Current Working Dir = $(pwd)"
         ls -l
     fi
 
@@ -1538,7 +1525,6 @@ config_and_build_simple() {
         # Go back to devel/trunk
         echo "popd"
         popd
-        echo "Current Working Dir = $(pwd)"
         ls -l
     fi
 
@@ -1720,6 +1706,37 @@ get_commit_hash() {
         echo "Cannot pick between both non-default branch and specified commit hash"
         return 1
     fi
+}
+
+#-------------------------------------------------------------------------
+# Function: python_pip_install
+# Description:
+#   Purpose: pip install deps for python3
+python_pip_install() {
+    echo "=============================================================="
+    echo "=== PYTHON PIP INSTALL"
+    echo "=============================================================="
+
+    if [ -z "${SST_PYTHON_APP_EXE}" ] || ! command -v "${SST_PYTHON_APP_EXE}" > /dev/null 2>&1; then
+        echo "ERROR: SST_PYTHON_APP_EXE is not set or not executable: ${SST_PYTHON_APP_EXE}"
+        exit 128
+    fi
+
+
+    # prevent nexus from being proxied
+    local no_proxy_string="127.0.0.1,localhost,.sandia.gov,gitlab.sandia.gov,::1,10.,172.16.,172.17.,192.16.,*.local,169.254/16,*.srn.sandia.gov"
+    no_proxy=$no_proxy_string "${SST_PYTHON_APP_EXE}" -m pip install lit
+    retval=$?
+    if [ $retval -ne 0 ]; then
+        echo "ERROR: failed to install python3 packages"
+        exit $retval
+    fi
+
+    echo "Using python executable: ${SST_PYTHON_APP_EXE}"
+    echo "Using python config executable: ${SST_PYTHON_CFG_EXE}"
+    echo "Using python home: ${SST_PYTHON_HOME}"
+    "${SST_PYTHON_APP_EXE}" --version
+    "${SST_PYTHON_APP_EXE}" -m pip list
 }
 
 #-------------------------------------------------------------------------
@@ -1927,10 +1944,6 @@ echo "bamboo.sh: Done sourcing deps/include/depsDefinitions.sh"
 
 source "${SST_ROOT}/test/utilities/moduleex.sh"
 
-echo "==============================INITIAL ENVIRONMENT DUMP================="
-env|sort
-echo "==============================INITIAL ENVIRONMENT DUMP================="
-
 retval=0
 echo "@@@@@@  \$0 = $0 ######"
 echo "@@@@@@  \$1 = $1 ######"
@@ -2079,6 +2092,8 @@ else
                 fi
             fi
 
+            python_pip_install
+
             echo "=============================================================="
             echo "=== FINAL PYTHON DETECTED VARIABLES"
             echo "=============================================================="
@@ -2136,7 +2151,7 @@ else
                 echo "Building SST-CORE Doxygen Documentation"
                 pushd $SST_ROOT/sst-core
                 ./autogen.sh
-                ./configure --disable-silent-rules --prefix=$SST_CORE_INSTALL
+                ./configure --prefix=$SST_CORE_INSTALL
                 make html 2> ./doc/makeHtmlErrors.txt
                 egrep "is not documented" ./doc/makeHtmlErrors.txt | sort > ./doc/undoc.txt
                 test -d ./doc/html
