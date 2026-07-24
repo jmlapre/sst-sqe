@@ -1629,6 +1629,37 @@ get_commit_hash() {
 }
 
 #-------------------------------------------------------------------------
+# Function: python_pip_install
+# Description:
+#   Purpose: pip install deps for python3
+python_pip_install() {
+    echo "=============================================================="
+    echo "=== PYTHON PIP INSTALL"
+    echo "=============================================================="
+
+    if [ -z "${SST_PYTHON_APP_EXE}" ] || ! command -v "${SST_PYTHON_APP_EXE}" > /dev/null 2>&1; then
+        echo "ERROR: SST_PYTHON_APP_EXE is not set or not executable: ${SST_PYTHON_APP_EXE}"
+        exit 128
+    fi
+
+
+    # prevent nexus from being proxied
+    local no_proxy_string="127.0.0.1,localhost,.sandia.gov,gitlab.sandia.gov,::1,10.,172.16.,172.17.,192.16.,*.local,169.254/16,*.srn.sandia.gov"
+    no_proxy=$no_proxy_string "${SST_PYTHON_APP_EXE}" -m pip install lit
+    retval=$?
+    if [ $retval -ne 0 ]; then
+        echo "ERROR: failed to install python3 packages"
+        exit $retval
+    fi
+
+    echo "Using python executable: ${SST_PYTHON_APP_EXE}"
+    echo "Using python config executable: ${SST_PYTHON_CFG_EXE}"
+    echo "Using python home: ${SST_PYTHON_HOME}"
+    "${SST_PYTHON_APP_EXE}" --version
+    "${SST_PYTHON_APP_EXE}" -m pip list
+}
+
+#-------------------------------------------------------------------------
 # Function: ExitOfScriptHandler
 # Trap the exit command and perform end of script processing.
 function ExitOfScriptHandler {
@@ -1970,6 +2001,8 @@ else
                     exit 128
                 fi
             fi
+
+            python_pip_install
 
             echo "=============================================================="
             echo "=== FINAL PYTHON DETECTED VARIABLES"
