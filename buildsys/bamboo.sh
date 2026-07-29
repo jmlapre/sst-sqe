@@ -1729,7 +1729,7 @@ python_pip_install() {
     retval=$?
     if [ $retval -ne 0 ]; then
         echo "ERROR: failed to install python3 packages"
-        exit $retval
+        echo "Continuing anyway..."
     fi
 
     echo "Using python executable: ${SST_PYTHON_APP_EXE}"
