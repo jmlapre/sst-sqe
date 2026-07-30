@@ -119,48 +119,51 @@ cloneOtherRepos() {
         # the variable to be read and not the contents, as `cloneRepo` will
         # set that variable and thus requires the name.
 
+        local timeout
+        timeout=180
+
         cloneRepo \
             "${SST_COREREPO}" \
             SST_CORE_HASH \
             "${SST_COREBRANCH}" \
             devel \
             sst-core \
-            90
+            $timeout
         cloneRepo \
             "${SST_ELEMENTSREPO}" \
             SST_ELEMENTS_HASH \
             "${SST_ELEMENTSBRANCH}" \
             devel \
             sst-elements \
-            250
+            $timeout
         cloneRepo \
             "${SST_MACROREPO}" \
             SST_MACRO_HASH \
             "${SST_MACROBRANCH}" \
             devel \
             sst-macro \
-            90
+            $timeout
         cloneRepo \
             "${SST_HGCCREPO}" \
             SST_HGCC_HASH \
             "${SST_HGCCBRANCH}" \
             devel \
             sst-hgcc \
-            90
+            $timeout
         cloneRepo \
             "${SST_EXTERNALELEMENTREPO}" \
             SST_EXTERNALELEMENT_HASH \
             "${SST_EXTERNALELEMENTBRANCH}" \
             master \
             sst-external-element \
-            90
+            $timeout
         cloneRepo \
             "${SST_JUNOREPO}" \
             SST_JUNO_HASH \
             "${SST_JUNOBRANCH}" \
             master \
             juno \
-            90
+            $timeout
 
         # Link the deps and test directories to the trunk
         echo " Creating Symbolic Links to the sqe directories (deps & test)"
